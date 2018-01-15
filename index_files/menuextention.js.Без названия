@@ -1,0 +1,85 @@
+﻿define(function () {
+    'use strict';
+    var link;
+    var errHandler;
+    var redirect = function () {
+        window.open(link.href, '_blank');
+    };
+    var getCreds = function () {
+        $.ajax
+        ({
+            type: 'GET',
+            url: link.href + 'saiku/rest/saiku/session',
+            dataType: 'json',
+            cache: false,
+            contentType: 'application/x-www-form-urlencoded',
+            xhrFields: {
+                withCredentials: true
+            }
+        }).done(function (data) {
+            if ((data) && (data.error)) {
+                errHandler(data);
+            } else {
+                redirect();
+            }
+        }).fail(function (data) {
+            errHandler(data);
+        });
+    };
+
+    var auth = function (data) {
+        $.ajax
+        ({
+            type: 'POST',
+            url: link.href + 'saiku/rest/saiku/session',
+            dataType: 'text',
+            data: { username: data.user, password: decodeURIComponent(data.pass), language: 'ru' },
+            contentType: 'application/x-www-form-urlencoded',
+            xhrFields: {
+                withCredentials: true
+            }
+        }).done(function (data) {
+            if ((data) && (data.error)) {
+                errHandler(data);
+            } else {
+                getCreds();
+            }
+        }).fail(function (data) {
+            errHandler(data);
+        });
+    };
+    
+    return  function (model) {
+        link = document.getElementById('statlink');
+        if (link) {
+            errHandler = function (data) {
+                if ((data.error) && !$.isFunction(data.error)) {
+                    dnevnik.dialogs.error(data.error);
+                } else {
+                    dnevnik.dialogs.error(model.defaultError);
+                }
+            };
+
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                $.ajax
+                ({
+                    type: 'GET',
+                    url: model.credUrl,
+                    dataType: 'json',
+                    xhrFields: {
+                        withCredentials: true
+                    }
+                }).done(function (data) {
+                    if (data.error) {
+                        errHandler(data);
+                    } else {
+                        auth(data);
+                    }
+                }).fail(function (data) {
+                    errHandler(data);
+                });
+            });
+        }
+    };
+});
